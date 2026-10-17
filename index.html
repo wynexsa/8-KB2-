@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hızlı Klavye - Türkçe On Parmak Hız Testi</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            user-select: none;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Letter Highlighting Styles */
+        .char-correct {
+            color: #22c55e;
+            background-color: rgba(34, 197, 94, 0.15);
+            border-radius: 2px;
+        }
+        .char-incorrect {
+            color: #ef4444;
+            background-color: rgba(239, 68, 68, 0.25);
+            text-decoration: underline;
+            border-radius: 2px;
+        }
+        .char-current {
+            background-color: rgba(59, 130, 246, 0.3);
+            border-bottom: 2px solid #3b82f6;
+            animation: pulse-bg 1.2s infinite;
+        }
+
+        @keyframes pulse-bg {
+            0%, 100% { background-color: rgba(59, 130, 246, 0.2); }
+            50% { background-color: rgba(59, 130, 246, 0.45); }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        .dark ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.5);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(107, 114, 128, 0.8);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-300">
+
+    <!-- Top Navigation Header -->
+    <header class="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-30">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+                    <i class="fa-solid font-bold fa-keyboard text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight tracking-tight">Hızlı Klavye</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Türkçe On Parmak Hız Testi</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <!-- Highscore Badge -->
+                <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-semibold">
+                    <i class="fa-solid fa-trophy"></i>
+                    <span>REKOR: <span id="highScoreVal">0</span> WPM</span>
+                </div>
+
+                <!-- Settings Button -->
+                <button id="btnSettings" class="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors" title="Ayarlar">
+                    <i class="fa-solid fa-gear text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-5xl w-full mx-auto px-4 py-6 flex flex-col justify-center gap-6">
+
+        <!-- Controls Toolbar -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
+            <!-- Category Selection -->
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-layer-group text-slate-400"></i>
+                <select id="categorySelect" class="bg-slate-100 dark:bg-slate-800 border-none text-slate-800 dark:text-slate-200 text-sm font-medium rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer">
+                    <option value="200">Sık Kullanılan 200 Kelime</option>
+                    <option value="1000">Sık Kullanılan 1000 Kelime</option>
+                    <option value="cities">Şehir ve İlçe İsimleri</option>
+                    <option value="longtext">Uzun Metin</option>
+                    <option value="custom">Kendi Metnini Ekle</option>
+                </select>
+            </div>
+
+            <!-- Options & Duration -->
+            <div class="flex items-center gap-3 flex-wrap">
+                <!-- Punctuation Toggle -->
+                <label class="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400 cursor-pointer select-none px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <input type="checkbox" id="punctuationToggle" class="rounded border-slate-300 dark:border-slate-700 text-emerald-600 focus:ring-emerald-500">
+                    <span>Noktalama & Rakam</span>
+                </label>
+
+                <div class="h-4 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block"></div>
+
+                <!-- Time Selector Buttons -->
+                <div class="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold">
+                    <span class="text-slate-400 px-2 flex items-center gap-1"><i class="fa-regular fa-clock"></i> Süre:</span>
+                    <button class="time-btn px-3 py-1.5 rounded-lg transition-all" data-time="15">15s</button>
+                    <button class="time-btn px-3 py-1.5 rounded-lg transition-all" data-time="30">30s</button>
+                    <button class="time-btn px-3 py-1.5 rounded-lg transition-all" data-time="45">45s</button>
+                    <button class="time-btn active px-3 py-1.5 rounded-lg bg-emerald-500 text-white shadow-sm transition-all" data-time="60">60s</button>
+                </div>
+
+                <!-- Pause Button -->
+                <button id="btnPause" disabled class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 text-xs font-semibold flex items-center gap-1.5 text-slate-600 dark:text-slate-300 transition-colors">
+                    <i class="fa-solid fa-pause"></i>
+                    <span>Mola (<span id="pauseKeyLabel">ESC</span>)</span>
+                </button>
+
+                <!-- Restart Button -->
+                <button id="btnRestart" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold flex items-center gap-1.5 text-slate-600 dark:text-slate-300 transition-colors" title="Testi Yenile">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span>Yenile</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Custom Text Modal/Area (Hidden by default) -->
+        <div id="customTextContainer" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col gap-3">
+            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Kendi Metninizi Yazın veya Yapıştırın:</label>
+            <textarea id="customTextInput" rows="3" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500 mono" placeholder="Burası sizin özel çalışma alanınız..."></textarea>
+            <div class="flex justify-end">
+                <button id="btnApplyCustomText" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-xl shadow-md shadow-emerald-500/20 transition-all">Metni Uygula ve Başla</button>
+            </div>
+        </div>
+
+        <!-- Live Statistics Counter -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase">Kalan Süre</p>
+                    <p id="statTime" class="text-2xl font-bold mono text-amber-500">60s</p>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                    <i class="fa-solid fa-stopwatch text-lg"></i>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase">Hız (WPM)</p>
+                    <p id="statWpm" class="text-2xl font-bold mono text-emerald-500">0</p>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                    <i class="fa-solid fa-bolt text-lg"></i>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase">Tuş/Dk (DKS)</p>
+                    <p id="statCpm" class="text-2xl font-bold mono text-blue-500">0</p>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                    <i class="fa-regular fa-keyboard text-lg"></i>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase">Doğruluk</p>
+                    <p id="statAccuracy" class="text-2xl font-bold mono text-purple-500">%100</p>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
+                    <i class="fa-solid fa-bullseye text-lg"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Text Display Box (Typing Area) -->
+        <div class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 md:p-8 shadow-sm min-h-[180px] flex items-center justify-center overflow-hidden cursor-text" id="textDisplayBox">
+            <!-- Pause Overlay -->
+            <div id="pauseOverlay" class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center text-white gap-3 hidden">
+                <i class="fa-solid fa-circle-pause text-5xl text-amber-400 animate-bounce"></i>
+                <h3 class="text-xl font-bold">Mola Verildi</h3>
+                <p class="text-sm text-slate-300">Devam etmek için <kbd id="pauseKeyOverlay" class="px-2 py-1 bg-slate-800 rounded text-xs mono">ESC</kbd> tuşuna veya buraya tıklayın</p>
+            </div>
+
+            <!-- Text Content -->
+            <div id="textDisplay" class="text-xl md:text-2xl leading-relaxed mono font-medium tracking-wide text-slate-400 select-none max-h-[160px] overflow-hidden w-full text-justify">
+                <!-- Spans will be generated dynamically -->
+            </div>
+
+            <!-- Start Hint Overlay -->
+            <div id="startHint" class="absolute inset-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center gap-2 transition-opacity">
+                <i class="fa-solid fa-arrow-pointer text-2xl text-emerald-500 animate-pulse"></i>
+                <span class="font-semibold text-slate-700 dark:text-slate-200">Yazmaya Başlamak İçin Buraya Tıklayın</span>
+                <span class="text-xs text-slate-500">İlk harfe bastığınızda süre otomatik olarak başlar</span>
+            </div>
+        </div>
+
+        <!-- Typing Input Box -->
+        <div class="relative">
+            <input type="text" id="typingInput" autocomplete="off" border-none outline-none autofocus
+                class="w-full bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 focus:border-emerald-500 dark:focus:border-emerald-500 rounded-2xl px-6 py-4 text-lg md:text-xl mono shadow-sm outline-none transition-all placeholder:text-slate-400"
+                placeholder="Yazmaya başlayın..." />
+            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-400 mono hidden md:inline">Kelime tamamlanınca <kbd class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-700">Başluk</kbd> bırakın</span>
+        </div>
+
+        <!-- Result Screen Modal / Section (Hidden until test ends) -->
+        <div id="resultCard" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl flex flex-col gap-6">
+            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+                <div>
+                    <h2 class="text-2xl font-bold flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-emerald-500"></i>
+                        <span>Test Sonucunuz</span>
+                    </h2>
+                    <p class="text-xs text-slate-500">Performansınızın detaylı analizi aşağıdadır.</p>
+                </div>
+                <button id="btnResultRestart" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm shadow-md shadow-emerald-500/20 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span>Tekrar Dene</span>
+                </button>
+            </div>
+
+            <!-- Stat Summary Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div class="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 text-center">
+                    <p class="text-xs text-slate-400 font-medium">Net Hız (WPM)</p>
+                    <p id="resWpm" class="text-3xl font-bold mono text-emerald-500 mt-1">0</p>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 text-center">
+                    <p class="text-xs text-slate-400 font-medium">Dakikadaki Vuruş (DKS)</p>
+                    <p id="resCpm" class="text-3xl font-bold mono text-blue-500 mt-1">0</p>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 text-center">
+                    <p class="text-xs text-slate-400 font-medium">Doğruluk Oranı</p>
+                    <p id="resAccuracy" class="text-3xl font-bold mono text-purple-500 mt-1">%0</p>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 text-center">
+                    <p class="text-xs text-slate-400 font-medium">Doğru / Yanlış Harf</p>
+                    <p class="text-2xl font-bold mono mt-1">
+                        <span id="resCorrectChars" class="text-emerald-500">0</span>
+                        <span class="text-slate-400">/</span>
+                        <span id="resIncorrectChars" class="text-red-500">0</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Performance Chart -->
+            <div class="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <p class="text-xs font-semibold text-slate-400 uppercase mb-3">Zaman İçindeki Hız Değişimi (WPM)</p>
+                <div class="h-48 w-full">
+                    <canvas id="wpmChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Error Letter Analysis & Action Controls -->
+            <div class="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-slate-200 dark:border-slate-800">
+                <!-- Errors Badges -->
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-xs font-medium text-slate-500">En Çok Hata Yapılan Harfler:</span>
+                    <div id="mistakeLetters" class="flex gap-1.5 flex-wrap">
+                        <span class="text-xs text-slate-400 italic">Hata yapılmadı 🎉</span>
+                    </div>
+                </div>
+
+                <!-- Export & Copy Actions -->
+                <div class="flex items-center gap-2">
+                    <button id="btnCopyScore" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 transition-colors flex items-center gap-1.5">
+                        <i class="fa-regular fa-copy"></i>
+                        <span>Skoru Kopyala</span>
+                    </button>
+                    <button id="btnExportJson" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 transition-colors flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-code"></i>
+                        <span>JSON İndir</span>
+                    </button>
+                    <button id="btnExportCsv" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 transition-colors flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-excel"></i>
+                        <span>CSV İndir</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Settings Modal Overlay -->
+    <div id="settingsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-6">
+            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+                <h3 class="text-lg font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-emerald-500"></i>
+                    <span>Uygulama Ayarları</span>
+                </h3>
+                <button id="btnCloseSettings" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="flex flex-col gap-4">
+                <!-- Theme Option -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-semibold">Görünüm / Tema</p>
+                        <p class="text-xs text-slate-400">Arayüz renk modunu değiştirin</p>
+                    </div>
+                    <select id="themeSelect" class="bg-slate-100 dark:bg-slate-800 text-sm font-medium rounded-xl px-3 py-1.5 outline-none border-none">
+                        <option value="dark">Koyu Mod</option>
+                        <option value="light">Açık Mod</option>
+                        <option value="system">Sistem</option>
+                    </select>
+                </div>
+
+                <hr class="border-slate-100 dark:border-slate-800">
+
+                <!-- Sound Effects Option -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-semibold">Tuş Sesi Efekti</p>
+                        <p class="text-xs text-slate-400">Yazma sırasında çalınacak ses</p>
+                    </div>
+                    <select id="soundTypeSelect" class="bg-slate-100 dark:bg-slate-800 text-sm font-medium rounded-xl px-3 py-1.5 outline-none border-none">
+                        <option value="typewriter">Klasik Daktilo</option>
+                        <option value="mechanical">Mekanik Klavye</option>
+                        <option value="off">Sessiz</option>
+                    </select>
+                </div>
+
+                <!-- Sound Volume Slider -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-semibold">Ses Seviyesi</p>
+                        <p class="text-xs text-slate-400">Tuş ses şiddeti</p>
+                    </div>
+                    <input type="range" id="soundVolume" min="0" max="1" step="0.1" value="0.5" class="w-28 accent-emerald-500">
+                </div>
+
+                <hr class="border-slate-100 dark:border-slate-800">
+
+                <!-- Pause Key Config -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-semibold">Mola Tuşu Kısayolu</p>
+                        <p class="text-xs text-slate-400">Testi duraklatan klavye tuşu</p>
+                    </div>
+                    <select id="pauseKeySelect" class="bg-slate-100 dark:bg-slate-800 text-sm font-medium rounded-xl px-3 py-1.5 outline-none border-none">
+                        <option value="Escape">ESC Tuşu</option>
+                        <option value="Space">Boşluk (Space)</option>
+                        <option value="KeyP">P Tuşu</option>
+                    </select>
+                </div>
+
+                <hr class="border-slate-100 dark:border-slate-800">
+
+                <!-- Data Clear -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-semibold">Geçmiş Veriler</p>
+                        <p class="text-xs text-slate-400">Rekor ve test geçmişini temizleyin</p>
+                    </div>
+                    <button id="btnClearData" class="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-semibold rounded-xl transition-colors">Verileri Sıfırla</button>
+                </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-200 dark:border-slate-800 text-center">
+                <button id="btnSaveSettings" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl shadow-md shadow-emerald-500/20 transition-all text-sm">Kaydet ve Kapat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application JavaScript Code -->
+    <script>
+        // Word Databases
+        const WORDS_200 = [
+            "göstermek", "gitmek", "bugün", "genç", "her", "birlikte", "ne", "siz", "sevmek", "ilk", "yapılmak",
+            "kişi", "arkadaş", "ile", "ev", "kız", "gün", "aynı", "sahip", "ses", "çıkarmak", "ve", "o", "dönmek",
+            "ben", "bilmek", "işte", "dünya", "onlar", "süre", "yol", "yazmak", "iki", "kalmak", "hiç", "fazla",
+            "çalışmak", "değil", "ön", "göz", "büyük", "kim", "öyle", "bilgi", "bütün", "gelmek", "zaman", "insan",
+            "durum", "vermek", "almak", "için", "kullanmak", "bulunmak", "başlamak", "çıkmak", "istemek", "konu",
+            "yaşamak", "durmak", "görmek", "anlamak", "söylemek", "gelen", "yine", "sonra", "el", "başka", "taraf",
+            "gibi", "kendi", "kadar", "olan", "daha", "bu", "çok", "bir", "en", "var", "yok", "veya", "ancak", "ama",
+            "çünkü", "nasıl", "neden", "şimdi", "sonra", "orada", "burada", "şöyle", "böyle", "artık", "tamam", "olmak"
+        ];
+
+        const WORDS_1000_ADDITIONAL = [
+            "bilgisayar", "yazılım", "teknoloji", "geliştirme", "sistem", "internet", "programlama", "tasarım",
+            "mühendislik", "gelecek", "öğrenme", "yapay", "zeka", "algoritma", "veri", "tabanı", "sunucu", "ağ",
+            "güvenlik", "proje", "ekip", "başarı", "hedef", "çözüm", "analiz", "strateji", "yönetim", "süreç",
+            "kalite", "performans", "üretim", "fikir", "yenilik", "değişim", "gelişim", "eğitim", "kültür", "sanat",
+            "toplum", "yaşam", "doğa", "evre", "evren", "bilim", "araştırma", "deney", "sonuç", "teori", "pratik"
+        ];
+
+        const CITIES_TURKEY = [
+            "İstanbul", "Ankara", "İzmir", "Bursa", "Antalya", "Adana", "Konya", "Şanlıurfa", "Gaziantep", "Kocaeli",
+            "Mersin", "Diyarbakır", "Hatay", "Manisa", "Kayseri", "Samsun", "Balıkesir", "Kahramanmaraş", "Van", "Aydın",
+            "Denizli", "Sakarya", "Tekirdağ", "Muğla", "Eskişehir", "Mardin", "Trabzon", "Malatya", "Erzurum", "Ordu"
+        ];
+
+        const LONG_TEXTS = [
+            "Teknolojinin hızla geliştiği günümüzde, bilgisayar okuryazarlığı ve klavyeyi etkili kullanma becerisi büyük bir önem kazanmıştır. On parmak klavye kullanımı, zamandan tasarruf sağlarken zihinsel odaklanmayı da artırır. Düşüncelerimizi ekrana aktarırken klavye tuşlarını aramamak, çalışma verimliliğimizi doğrudan etkiler. Günlük hayatta e-posta yazarken, rapor hazırlarken veya bir kod mimarisi kurgularken hızlı ve hatasız yazabilmek bizi her zaman bir adım öne taşır. Düzenli pratik yaparak ve doğru parmak pozisyonlarını koruyarak siz de klavye hızınızı iki katına çıkarabilirsiniz.",
+            "Kitap okumak, zihnin derinliklerine doğru yapılan eşsiz bir yolculuktur. Okuduğumuz her bir sayfa, yeni dünyaların kapılarını aralar ve kelime dağarcığımızı zenginleştirir. Akıcı bir konuşma ve güçlü bir yazım dili için sürekli okumak ve yazma pratikleri yapmak gerekir. Klavye başında geçirdiğimiz süre boyunca anlamlı cümleler kurgulamak, odaklanma yeteneğimizi artırır. Başarı, düzenli çalışma ve kararlılığın bir sonucudur."
+        ];
+
+        // App State
+        let currentCategory = '200';
+        let selectedTime = 60;
+        let timeLeft = 60;
+        let isPunctuationEnabled = false;
+        let isRunning = false;
+        let isPaused = false;
+        let timerInterval = null;
+
+        let targetText = "";
+        let targetWords = [];
+        let currentWordIndex = 0;
+        let typedHistory = []; // History of typed strings for words
+
+        // Stats tracking
+        let totalCorrectChars = 0;
+        let totalIncorrectChars = 0;
+        let mistakeLetterMap = {};
+        let wpmHistory = [];
+
+        // Settings State
+        let settings = {
+            theme: 'dark',
+            soundType: 'typewriter',
+            volume: 0.5,
+            pauseKey: 'Escape'
+        };
+
+        let wpmChartInstance = null;
+
+        // Web Audio API Synth Sounds
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playKeySound() {
+            if (settings.soundType === 'off' || settings.volume <= 0) return;
+            
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+                if (settings.soundType === 'typewriter') {
+                    // Vintage Typewriter Mechanical Click
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(1200, now);
+                    osc.frequency.exponentialRampToValueAtTime(200, now + 0.04);
+                    gain.gain.setValueAtTime(settings.volume * 0.4, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+                    osc.start(now);
+                    osc.stop(now + 0.04);
+                } else if (settings.soundType === 'mechanical') {
+                    // Modern Cherry MX Clicky Switch Sound
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(800, now);
+                    osc.frequency.exponentialRampToValueAtTime(100, now + 0.02);
+                    gain.gain.setValueAtTime(settings.volume * 0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+                    osc.start(now);
+                    osc.stop(now + 0.02);
+                }
+            } catch (e) {
+                // Audio Context fallback if blocked
+            }
+        }
+
+        // DOM Elements
+        const textDisplay = document.getElementById('textDisplay');
+        const typingInput = document.getElementById('typingInput');
+        const startHint = document.getElementById('startHint');
+        const categorySelect = document.getElementById('categorySelect');
+        const punctuationToggle = document.getElementById('punctuationToggle');
+        const timeBtns = document.querySelectorAll('.time-btn');
+        const btnRestart = document.getElementById('btnRestart');
+        const btnPause = document.getElementById('btnPause');
+        const pauseOverlay = document.getElementById('pauseOverlay');
+        const customTextContainer = document.getElementById('customTextContainer');
+        const customTextInput = document.getElementById('customTextInput');
+        const btnApplyCustomText = document.getElementById('btnApplyCustomText');
+
+        // Stat Elements
+        const statTime = document.getElementById('statTime');
+        const statWpm = document.getElementById('statWpm');
+        const statCpm = document.getElementById('statCpm');
+        const statAccuracy = document.getElementById('statAccuracy');
+        const highScoreVal = document.getElementById('highScoreVal');
+
+        // Result Elements
+        const resultCard = document.getElementById('resultCard');
+        const resWpm = document.getElementById('resWpm');
+        const resCpm = document.getElementById('resCpm');
+        const resAccuracy = document.getElementById('resAccuracy');
+        const resCorrectChars = document.getElementById('resCorrectChars');
+        const resIncorrectChars = document.getElementById('resIncorrectChars');
+        const mistakeLetters = document.getElementById('mistakeLetters');
+        const btnResultRestart = document.getElementById('btnResultRestart');
+
+        // Settings Elements
+        const btnSettings = document.getElementById('btnSettings');
+        const settingsModal = document.getElementById('settingsModal');
+        const btnCloseSettings = document.getElementById('btnCloseSettings');
+        const btnSaveSettings = document.getElementById('btnSaveSettings');
+        const themeSelect = document.getElementById('themeSelect');
+        const soundTypeSelect = document.getElementById('soundTypeSelect');
+        const soundVolume = document.getElementById('soundVolume');
+        const pauseKeySelect = document.getElementById('pauseKeySelect');
+        const btnClearData = document.getElementById('btnClearData');
+        const pauseKeyLabel = document.getElementById('pauseKeyLabel');
+        const pauseKeyOverlay = document.getElementById('pauseKeyOverlay');
+
+        // Initialize App
+        function init() {
+            loadSettings();
+            loadHighScore();
+            setupEventListeners();
+            resetTest();
+        }
+
+        // Generate Text based on selection
+        function generateText() {
+            let words = [];
+            if (currentCategory === '200') {
+                words = [...WORDS_200];
+            } else if (currentCategory === '1000') {
+                words = [...WORDS_200, ...WORDS_1000_ADDITIONAL];
+            } else if (currentCategory === 'cities') {
+                words = [...CITIES_TURKEY];
+            } else if (currentCategory === 'longtext') {
+                const text = LONG_TEXTS[Math.floor(Math.random() * LONG_TEXTS.length)];
+                return text;
+            } else if (currentCategory === 'custom') {
+                return customTextInput.value.trim() || "Lütfen özel metin alanına çalışma yapmak istediğiniz metni ekleyin.";
+            }
+
+            // Shuffle array for randomness
+            for (let i = words.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [words[i], words[j]] = [words[j], words[i]];
+            }
+
+            // Add Punctuation/Numbers if enabled
+            if (isPunctuationEnabled && currentCategory !== 'custom') {
+                words = words.map(w => {
+                    if (Math.random() < 0.2) {
+                        const marks = ['.', ',', '!', '?', ';'];
+                        w += marks[Math.floor(Math.random() * marks.length)];
+                    }
+                    if (Math.random() < 0.15) {
+                        w = w.charAt(0).toUpperCase() + w.slice(1);
+                    }
+                    return w;
+                });
+            }
+
+            return words.slice(0, 120).join(" ");
+        }
+
+        // Render Words to Display
+        function renderText() {
+            targetText = generateText();
+            targetWords = targetText.split(' ');
+            textDisplay.innerHTML = '';
+
+            targetWords.forEach((word, wIdx) => {
+                const wordSpan = document.createElement('span');
+                wordSpan.className = 'inline-block mr-2.5 mb-2 rounded px-1 transition-colors';
+                wordSpan.dataset.wordIndex = wIdx;
+
+                for (let cIdx = 0; cIdx < word.length; cIdx++) {
+                    const charSpan = document.createElement('span');
+                    charSpan.textContent = word[cIdx];
+                    charSpan.dataset.charIndex = cIdx;
+                    wordSpan.appendChild(charSpan);
+                }
+
+                textDisplay.appendChild(wordSpan);
+            });
+
+            highlightCurrentWord();
+        }
+
+        // Highlight Current Active Word & Characters
+        function highlightCurrentWord() {
+            const wordSpans = textDisplay.querySelectorAll('span[data-word-index]');
+            wordSpans.forEach((ws, idx) => {
+                if (idx === currentWordIndex) {
+                    ws.classList.add('bg-slate-200/50', 'dark:bg-slate-800/80');
+                    // Scroll into view if needed
+                    ws.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else {
+                    ws.classList.remove('bg-slate-200/50', 'dark:bg-slate-800/80');
+                }
+            });
+        }
+
+        // Start Timer
+        function startTest() {
+            if (isRunning) return;
+            isRunning = true;
+            isPaused = false;
+            startHint.classList.add('opacity-0', 'pointer-events-none');
+            btnPause.disabled = false;
+
+            timerInterval = setInterval(() => {
+                if (!isPaused) {
+                    timeLeft--;
+                    statTime.textContent = `${timeLeft}s`;
+
+                    // Record WPM data every second for chart
+                    updateLiveStats();
+                    const currentWpm = calculateWPM();
+                    wpmHistory.push(currentWpm);
+
+                    if (timeLeft <= 0) {
+                        endTest();
+                    }
+                }
+            }, 1000);
+        }
+
+        // Pause / Resume Test
+        function togglePause() {
+            if (!isRunning) return;
+            isPaused = !isPaused;
+
+            if (isPaused) {
+                pauseOverlay.classList.remove('hidden');
+                typingInput.disabled = true;
+            } else {
+                pauseOverlay.classList.add('hidden');
+                typingInput.disabled = false;
+                typingInput.focus();
+            }
+        }
+
+        // Calculate Realtime Stats
+        function calculateWPM() {
+            const elapsedTimeInMinutes = (selectedTime - timeLeft) / 60;
+            if (elapsedTimeInMinutes <= 0) return 0;
+            const netWords = (totalCorrectChars / 5);
+            return Math.max(0, Math.round(netWords / elapsedTimeInMinutes));
+        }
+
+        function calculateCPM() {
+            const elapsedTimeInMinutes = (selectedTime - timeLeft) / 60;
+            if (elapsedTimeInMinutes <= 0) return 0;
+            return Math.round(totalCorrectChars / elapsedTimeInMinutes);
+        }
+
+        function calculateAccuracy() {
+            const total = totalCorrectChars + totalIncorrectChars;
+            if (total === 0) return 100;
+            return Math.round((totalCorrectChars / total) * 100);
+        }
+
+        function updateLiveStats() {
+            statWpm.textContent = calculateWPM();
+            statCpm.textContent = calculateCPM();
+            statAccuracy.textContent = `%${calculateAccuracy()}`;
+        }
+
+        // Handle Input Realtime
+        function handleInput(e) {
+            if (!isRunning && typingInput.value.length > 0) {
+                startTest();
+            }
+
+            if (isPaused) return;
+
+            playKeySound();
+
+            const typedVal = typingInput.value;
+            const currentWord = targetWords[currentWordIndex];
+            const currentWordSpan = textDisplay.querySelector(`span[data-word-index="${currentWordIndex}"]`);
+
+            if (!currentWordSpan) return;
+
+            const charSpans = currentWordSpan.querySelectorAll('span[data-char-index]');
+
+            // Check Space pressed (Move to next word)
+            if (e.inputType === 'insertText' && e.data === ' ') {
+                typedHistory[currentWordIndex] = typedVal.trim();
+                typingInput.value = '';
+                currentWordIndex++;
+
+                if (currentWordIndex >= targetWords.length) {
+                    endTest();
+                } else {
+                    highlightCurrentWord();
+                }
+                return;
+            }
+
+            // Realtime letter validation & styling
+            let correctCharsInWord = 0;
+            let incorrectCharsInWord = 0;
+
+            for (let i = 0; i < currentWord.length; i++) {
+                const charSpan = charSpans[i];
+                if (!charSpan) continue;
+
+                if (i < typedVal.length) {
+                    if (typedVal[i] === currentWord[i]) {
+                        charSpan.className = 'char-correct';
+                        correctCharsInWord++;
+                    } else {
+                        charSpan.className = 'char-incorrect';
+                        incorrectCharsInWord++;
+                        // Record mistake letter
+                        const errLetter = currentWord[i].toLowerCase();
+                        mistakeLetterMap[errLetter] = (mistakeLetterMap[errLetter] || 0) + 1;
+                    }
+                } else if (i === typedVal.length) {
+                    charSpan.className = 'char-current';
+                } else {
+                    charSpan.className = '';
+                }
+            }
+
+            // Recalculate totals
+            recalculateTotalChars();
+            updateLiveStats();
+        }
+
+        function recalculateTotalChars() {
+            let correct = 0;
+            let incorrect = 0;
+
+            // Past words
+            for (let w = 0; w < currentWordIndex; w++) {
+                const word = targetWords[w];
+                const typed = typedHistory[w] || '';
+                for (let c = 0; c < word.length; c++) {
+                    if (c < typed.length && typed[c] === word[c]) {
+                        correct++;
+                    } else {
+                        incorrect++;
+                    }
+                }
+            }
+
+            // Current word
+            const typedCurrent = typingInput.value;
+            const currentWord = targetWords[currentWordIndex] || '';
+            for (let c = 0; c < typedCurrent.length; c++) {
+                if (c < currentWord.length) {
+                    if (typedCurrent[c] === currentWord[c]) {
+                        correct++;
+                    } else {
+                        incorrect++;
+                    }
+                } else {
+                    incorrect++; // Extra typed chars
+                }
+            }
+
+            totalCorrectChars = correct;
+            totalIncorrectChars = incorrect;
+        }
+
+        // End Test & Show Results
+        function endTest() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            typingInput.disabled = true;
+
+            const finalWpm = calculateWPM();
+            const finalCpm = calculateCPM();
+            const finalAcc = calculateAccuracy();
+
+            // Save High Score
+            saveHighScore(finalWpm);
+
+            // Populate Result Card
+            resWpm.textContent = finalWpm;
+            resCpm.textContent = finalCpm;
+            resAccuracy.textContent = `%${finalAcc}`;
+            resCorrectChars.textContent = totalCorrectChars;
+            resIncorrectChars.textContent = totalIncorrectChars;
+
+            // Render Mistake Badges
+            mistakeLetters.innerHTML = '';
+            const sortedMistakes = Object.entries(mistakeLetterMap)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+
+            if (sortedMistakes.length === 0) {
+                mistakeLetters.innerHTML = `<span class="text-xs text-emerald-500 font-semibold">Mükemmel! Hiç hata yapmadınız 🎉</span>`;
+            } else {
+                sortedMistakes.forEach(([letter, count]) => {
+                    const badge = document.createElement('span');
+                    badge.className = 'px-2 py-1 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg text-xs font-bold mono';
+                    badge.textContent = `'${letter.toUpperCase()}': ${count} kez`;
+                    mistakeLetters.appendChild(badge);
+                });
+            }
+
+            // Show Results View
+            resultCard.classList.remove('hidden');
+            resultCard.scrollIntoView({ behavior: 'smooth' });
+
+            renderChart();
+            saveTestToLog({
+                date: new Date().toISOString(),
+                wpm: finalWpm,
+                cpm: finalCpm,
+                accuracy: finalAcc,
+                category: currentCategory,
+                time: selectedTime
+            });
+        }
+
+        // Render Performance Chart (Chart.js)
+        function renderChart() {
+            const ctx = document.getElementById('wpmChart').getContext('2d');
+            if (wpmChartInstance) wpmChartInstance.destroy();
+
+            const labels = wpmHistory.map((_, idx) => `${idx + 1}s`);
+
+            wpmChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Hız (WPM)',
+                        data: wpmHistory,
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // Reset Test State
+        function resetTest() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            isPaused = false;
+            timeLeft = selectedTime;
+            currentWordIndex = 0;
+            typedHistory = [];
+            totalCorrectChars = 0;
+            totalIncorrectChars = 0;
+            mistakeLetterMap = {};
+            wpmHistory = [];
+
+            statTime.textContent = `${selectedTime}s`;
+            statWpm.textContent = '0';
+            statCpm.textContent = '0';
+            statAccuracy.textContent = '%100';
+
+            typingInput.disabled = false;
+            typingInput.value = '';
+            pauseOverlay.classList.add('hidden');
+            startHint.classList.remove('opacity-0', 'pointer-events-none');
+            resultCard.classList.add('hidden');
+            btnPause.disabled = true;
+
+            renderText();
+            typingInput.focus();
+        }
+
+        // Settings & Storage Handlers
+        function loadSettings() {
+            const saved = localStorage.getItem('keyboard_test_settings');
+            if (saved) {
+                settings = { ...settings, ...JSON.parse(saved) };
+            }
+
+            themeSelect.value = settings.theme;
+            soundTypeSelect.value = settings.soundType;
+            soundVolume.value = settings.volume;
+            pauseKeySelect.value = settings.pauseKey;
+
+            applyTheme();
+            updatePauseKeyLabels();
+        }
+
+        function saveSettings() {
+            settings.theme = themeSelect.value;
+            settings.soundType = soundTypeSelect.value;
+            settings.volume = parseFloat(soundVolume.value);
+            settings.pauseKey = pauseKeySelect.value;
+
+            localStorage.setItem('keyboard_test_settings', JSON.stringify(settings));
+            applyTheme();
+            updatePauseKeyLabels();
+            settingsModal.classList.add('hidden');
+        }
+
+        function applyTheme() {
+            if (settings.theme === 'dark' || (settings.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+
+        function updatePauseKeyLabels() {
+            const labelMap = { 'Escape': 'ESC', 'Space': 'Boşluk', 'KeyP': 'P' };
+            const label = labelMap[settings.pauseKey] || 'ESC';
+            pauseKeyLabel.textContent = label;
+            pauseKeyOverlay.textContent = label;
+        }
+
+        function loadHighScore() {
+            const score = localStorage.getItem('keyboard_test_highscore') || 0;
+            highScoreVal.textContent = score;
+        }
+
+        function saveHighScore(score) {
+            const currentHigh = parseInt(localStorage.getItem('keyboard_test_highscore') || '0');
+            if (score > currentHigh) {
+                localStorage.setItem('keyboard_test_highscore', score);
+                highScoreVal.textContent = score;
+            }
+        }
+
+        function saveTestToLog(data) {
+            const logs = JSON.parse(localStorage.getItem('keyboard_test_logs') || '[]');
+            logs.push(data);
+            localStorage.setItem('keyboard_test_logs', JSON.stringify(logs));
+        }
+
+        // Export Data Files
+        function exportJson() {
+            const logs = localStorage.getItem('keyboard_test_logs') || '[]';
+            const blob = new Blob([logs], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `klavye-hiz-testi-log-${Date.now()}.json`;
+            a.click();
+        }
+
+        function exportCsv() {
+            const logs = JSON.parse(localStorage.getItem('keyboard_test_logs') || '[]');
+            if (logs.length === 0) {
+                alert("Henüz kaydedilmiş veri bulunmuyor.");
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,Tarih,WPM,DKS,Dogruluk,Kategori,Sure\n";
+            logs.forEach(l => {
+                csvContent += `${l.date},${l.wpm},${l.cpm},${l.accuracy},${l.category},${l.time}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const a = document.createElement('a');
+            a.href = encodedUri;
+            a.download = `klavye-hiz-testi-log-${Date.now()}.csv`;
+            a.click();
+        }
+
+        // Setup Event Listeners
+        function setupEventListeners() {
+            typingInput.addEventListener('input', handleInput);
+
+            // Click focus on display box
+            document.getElementById('textDisplayBox').addEventListener('click', () => {
+                if (isPaused) togglePause();
+                else typingInput.focus();
+            });
+
+            // Category select
+            categorySelect.addEventListener('change', (e) => {
+                currentCategory = e.target.value;
+                if (currentCategory === 'custom') {
+                    customTextContainer.classList.remove('hidden');
+                } else {
+                    customTextContainer.classList.add('hidden');
+                }
+                resetTest();
+            });
+
+            btnApplyCustomText.addEventListener('click', () => {
+                resetTest();
+            });
+
+            punctuationToggle.addEventListener('change', (e) => {
+                isPunctuationEnabled = e.target.checked;
+                resetTest();
+            });
+
+            // Time Buttons
+            timeBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    timeBtns.forEach(b => b.classList.remove('active', 'bg-emerald-500', 'text-white'));
+                    btn.classList.add('active', 'bg-emerald-500', 'text-white');
+                    selectedTime = parseInt(btn.dataset.time);
+                    resetTest();
+                });
+            });
+
+            btnRestart.addEventListener('click', resetTest);
+            btnResultRestart.addEventListener('click', resetTest);
+            btnPause.addEventListener('click', togglePause);
+
+            // Keyboard Shortcut for Pause
+            window.addEventListener('keydown', (e) => {
+                if (e.code === settings.pauseKey && isRunning) {
+                    e.preventDefault();
+                    togglePause();
+                }
+            });
+
+            // Settings Modal Events
+            btnSettings.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+            btnCloseSettings.addEventListener('click', () => settingsModal.classList.add('hidden'));
+            btnSaveSettings.addEventListener('click', saveSettings);
+
+            btnClearData.addEventListener('click', () => {
+                if (confirm("Tüm rekor ve test geçmişinizi silmek istediğinizden emin misiniz?")) {
+                    localStorage.removeItem('keyboard_test_highscore');
+                    localStorage.removeItem('keyboard_test_logs');
+                    highScoreVal.textContent = '0';
+                    alert("Veriler başarıyla sıfırlandı.");
+                }
+            });
+
+            // Export Actions
+            document.getElementById('btnExportJson').addEventListener('click', exportJson);
+            document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
+            document.getElementById('btnCopyScore').addEventListener('click', () => {
+                const scoreText = `🎹 Hızlı Klavye Hız Testi Sonucum:\n🚀 Hız: ${resWpm.textContent} WPM\n🎯 Doğruluk: ${resAccuracy.textContent}\n⌨️ DKS: ${resCpm.textContent}\nSiz de deneyin!`;
+                navigator.clipboard.writeText(scoreText).then(() => {
+                    alert("Sonuç kartı panoya kopyalandı!");
+                });
+            });
+        }
+
+        // Run Application
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
